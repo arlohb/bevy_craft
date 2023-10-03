@@ -75,19 +75,34 @@ pub struct IncompleteMesh {
 }
 
 impl IncompleteMesh {
-    pub fn add_face(&mut self, dir: Direction, block: Block) {
-        for i in [0, 3, 1, 3, 2, 1] {
+    pub fn add_face(&mut self, pos: Vec3, dir: Direction, invert: bool, block: Block) {
+        let mut indices = [0, 3, 1, 3, 2, 1];
+        if invert {
+            indices.reverse();
+        }
+        for i in indices {
             self.indices.push(i + self.vertices.len() as u16);
         }
 
         for (v, n) in dir.face_verts() {
-            self.vertices.push(v);
-            self.normals.push(n);
+            self.vertices.push(v + pos);
+            self.normals.push(n * if invert { -1. } else { 1. });
         }
 
         for uv in block.uvs() {
             self.uvs.push(uv);
         }
+    }
+
+    pub fn maybe_add_face(&mut self, pos: Vec3, dir: Direction, a: Block, b: Block) {
+        let (block, invert) = match (a, b) {
+            (Block::Air, Block::Air) => return,
+            (Block::Air, b) => (b, true),
+            (a, Block::Air) => (a, false),
+            _ => return,
+        };
+
+        self.add_face(pos, dir, invert, block);
     }
 
     pub fn complete(self) -> Mesh {
@@ -100,11 +115,12 @@ impl IncompleteMesh {
     }
 }
 
+#[allow(dead_code)]
 pub fn test_cube() -> Mesh {
     let mut incomplete_mesh = IncompleteMesh::default();
 
     for dir in Direction::iter() {
-        incomplete_mesh.add_face(dir, Block::Dirt);
+        incomplete_mesh.add_face(Vec3::ZERO, dir, false, Block::Dirt);
     }
 
     incomplete_mesh.complete()

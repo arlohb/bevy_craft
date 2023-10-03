@@ -5,7 +5,7 @@ mod world;
 
 use crate::world::World;
 use bevy::prelude::*;
-use mesh::test_cube;
+use chunk::Chunk;
 
 fn main() {
     App::new()
@@ -24,7 +24,7 @@ fn setup(
     mut world: ResMut<World>,
 ) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(4., 6., 12.).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
+        transform: Transform::from_xyz(32., 24., 32.).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
         ..default()
     });
 
@@ -45,7 +45,8 @@ fn setup(
         ..default()
     });
 
-    let mesh = test_cube();
+    let chunk = Chunk::new();
+    let mesh = chunk.build_mesh();
 
     let mesh_handle = meshes.add(mesh);
     world.mesh = mesh_handle.clone();
