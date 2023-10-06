@@ -40,10 +40,7 @@ impl FlyCamPlugin {
         ));
     }
 
-    fn movement(
-        mut query: Query<(&mut Transform, &FlyCam), With<Camera3d>>,
-        keys: Res<Input<KeyCode>>,
-    ) {
+    fn movement(mut query: Query<(&mut Transform, &FlyCam)>, keys: Res<Input<KeyCode>>) {
         for (mut transform, fly_cam) in &mut query {
             let move_speed = if keys.pressed(KeyCode::ShiftLeft) {
                 fly_cam.move_speed * fly_cam.sprint_mod
@@ -84,7 +81,7 @@ impl FlyCamPlugin {
     }
 
     fn rotate(
-        mut query: Query<(&mut Transform, &FlyCam), With<Camera3d>>,
+        mut query: Query<(&mut Transform, &FlyCam)>,
         mouse_btns: Res<Input<MouseButton>>,
         mut mouse_motion: EventReader<MouseMotion>,
     ) {
