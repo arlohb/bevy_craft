@@ -1,4 +1,5 @@
 mod block;
+mod camera;
 mod chunk;
 mod mesh;
 mod world;
@@ -14,6 +15,7 @@ fn main() {
         .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin)
         .add_plugins(bevy::asset::diagnostic::AssetCountDiagnosticsPlugin::<Mesh>::default())
+        .add_plugins(camera::FlyCamPlugin)
         .add_systems(Startup, create_axis)
         .add_systems(Startup, setup)
         .add_systems(Update, entities_count)
@@ -37,11 +39,6 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut world: ResMut<World>,
 ) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(120., 40., 120.).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
-        ..default()
-    });
-
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             color: Color::WHITE,
