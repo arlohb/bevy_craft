@@ -25,7 +25,11 @@ impl Chunk {
             for y in 0..16 {
                 for z in 0..16 {
                     let height = ((x + z) % 2) + 7;
-                    let block = if y <= height { Block::Dirt } else { Block::Air };
+                    let block = match y {
+                        y if y < height => Block::Stone,
+                        y if y == height => Block::Dirt,
+                        _ => Block::Air,
+                    };
 
                     self.blocks[x][y][z] = block;
                 }

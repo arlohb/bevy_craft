@@ -6,25 +6,39 @@ mod world;
 use crate::world::World;
 use bevy::prelude::*;
 use chunk::Chunk;
+use world::{mesh_cleanup, world_mesh_gen};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin)
+        .add_plugins(bevy::asset::diagnostic::AssetCountDiagnosticsPlugin::<Mesh>::default())
         .add_systems(Startup, create_axis)
         .add_systems(Startup, setup)
+        .add_systems(Update, entities_count)
+        .add_systems(Update, world_mesh_gen)
+        .add_systems(Update, mesh_cleanup.before(world_mesh_gen))
         .insert_resource(World::new())
         .run();
+}
+
+fn entities_count(world: &bevy::prelude::World, meshes: Res<Assets<Mesh>>) {
+    println!(
+        "Entities: {}, Meshes: {}",
+        world.entities().len(),
+        meshes.len()
+    );
 }
 
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut world: ResMut<World>,
 ) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(32., 24., 32.).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+        transform: Transform::from_xyz(120., 40., 120.).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
         ..default()
     });
 
@@ -40,23 +54,16 @@ fn setup(
     });
 
     let world_tex: Handle<Image> = asset_server.load("./Texture.png");
-    let world_mat = materials.add(StandardMaterial {
+    world.material = materials.add(StandardMaterial {
         base_color_texture: Some(world_tex),
         ..default()
     });
 
-    let chunk = Chunk::new();
-    let mesh = chunk.build_mesh();
-
-    let mesh_handle = meshes.add(mesh);
-    world.mesh = mesh_handle.clone();
-
-    commands.spawn(PbrBundle {
-        mesh: mesh_handle,
-        material: world_mat,
-        transform: Transform::default(),
-        ..default()
-    });
+    for x in -5..=5 {
+        for z in -5..=5 {
+            world.chunks.insert(IVec3::new(x, 0, z), Chunk::new());
+        }
+    }
 }
 
 fn create_axis(
