@@ -1,4 +1,6 @@
+use crate::{block::Block, world::World};
 use bevy::{input::mouse::MouseMotion, prelude::*};
+use parry3d::na;
 
 #[derive(Component)]
 pub struct FlyCam {
@@ -24,7 +26,8 @@ impl Plugin for FlyCamPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, Self::setup)
             .add_systems(Update, Self::movement)
-            .add_systems(Update, Self::rotate);
+            .add_systems(Update, Self::rotate)
+            .add_systems(Update, Self::pointer);
     }
 }
 
@@ -38,6 +41,43 @@ impl FlyCamPlugin {
             },
             FlyCam::default(),
         ));
+    }
+
+    fn create_ray(transform: &Transform) -> parry3d::query::Ray {
+        let origin = transform.translation;
+        let direction = transform.forward();
+
+        parry3d::query::Ray::new(
+            na::Point3::new(origin.x, origin.y, origin.z),
+            na::Vector3::new(direction.x, direction.y, direction.z),
+        )
+    }
+
+    pub fn pointer(
+        query: Query<&Transform, With<FlyCam>>,
+        mouse_btns: Res<Input<MouseButton>>,
+        mut world: ResMut<World>,
+    ) {
+        let transform = query
+            .get_single()
+            .expect("None / more than 1 camera present");
+
+        if mouse_btns.pressed(MouseButton::Left) {
+            let ray = Self::create_ray(transform);
+
+            if let Some((hit, target)) = world
+                .cast_ray(&ray)
+                .and_then(|world_hit| Some(world_hit.clone()).zip(world.target_from_hit(world_hit)))
+            {
+                let block = world.chunks.get_mut(&hit.chunk_id).unwrap().get_mut(
+                    target.local_pos.x as usize,
+                    target.local_pos.y as usize,
+                    target.local_pos.z as usize,
+                );
+
+                *block = Block::Air;
+            }
+        }
     }
 
     fn movement(mut query: Query<(&mut Transform, &FlyCam)>, keys: Res<Input<KeyCode>>) {

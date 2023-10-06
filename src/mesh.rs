@@ -2,6 +2,7 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
+use parry3d::na;
 
 use crate::block::Block;
 
@@ -113,6 +114,33 @@ impl IncompleteMesh {
         mesh.set_indices(Some(Indices::U16(self.indices)));
         mesh
     }
+}
+
+/// This may be able to be made faster.
+/// `TriMesh` is really `GenericTriMesh<DefaultStorage>`,
+/// so bevy's `Mesh` could be wrapped as a storage type instead.
+pub fn mesh_to_tri_mesh(mesh: &Mesh) -> parry3d::shape::TriMesh {
+    parry3d::shape::TriMesh::new(
+        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+            .expect("Mesh has not vertex positions")
+            .as_float3()
+            .expect("Mesh vertex positions are not float3s")
+            .iter()
+            .map(|[x, y, z]| na::Point3::new(*x, *y, *z))
+            .collect::<Vec<_>>(),
+        {
+            let mut indices = mesh.indices().expect("Mesh has no indices").iter();
+            let mut result = vec![];
+            while let Some(first) = indices.next() {
+                result.push([
+                    first as u32,
+                    indices.next().expect("Indices not a multiple of 3") as u32,
+                    indices.next().expect("Indices not a multiple of 3") as u32,
+                ]);
+            }
+            result
+        },
+    )
 }
 
 #[allow(dead_code)]

@@ -38,7 +38,12 @@ impl Chunk {
     }
 
     /// Try and get a block, returning None if outside bounds
-    pub fn try_get(&self, x: usize, y: usize, z: usize) -> Option<Block> {
+    pub fn try_get(&self, x: i32, y: i32, z: i32) -> Option<Block> {
+        // If less than 0 make outside of bounds on other side
+        let x = usize::try_from(x).unwrap_or(16);
+        let y = usize::try_from(y).unwrap_or(16);
+        let z = usize::try_from(z).unwrap_or(16);
+
         self.blocks
             .get(x)
             .and_then(|arr| arr.get(y))
@@ -47,8 +52,13 @@ impl Chunk {
     }
 
     /// Tries to get a block, returning `Block::Air` if outside bounds
-    pub fn get_or_air(&self, x: usize, y: usize, z: usize) -> Block {
+    pub fn get_or_air(&self, x: i32, y: i32, z: i32) -> Block {
         self.try_get(x, y, z).unwrap_or(Block::Air)
+    }
+
+    /// Mutable gets a block
+    pub fn get_mut(&mut self, x: usize, y: usize, z: usize) -> &mut Block {
+        &mut self.blocks[x][y][z]
     }
 
     pub fn build_mesh(&self) -> Mesh {
@@ -84,9 +94,9 @@ impl Chunk {
                 for z in 0..16 {
                     let a = self.blocks[x][y][z];
 
-                    let px = self.get_or_air(x + 1, y, z);
-                    let py = self.get_or_air(x, y + 1, z);
-                    let pz = self.get_or_air(x, y, z + 1);
+                    let px = self.get_or_air(x as i32 + 1, y as i32, z as i32);
+                    let py = self.get_or_air(x as i32, y as i32 + 1, z as i32);
+                    let pz = self.get_or_air(x as i32, y as i32, z as i32 + 1);
 
                     let pos = Vec3::new(x as f32, y as f32, z as f32);
                     incomplete_mesh.maybe_add_face(pos, Direction::Px, a, px);

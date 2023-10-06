@@ -19,13 +19,14 @@ fn main() {
         .add_systems(Startup, create_axis)
         .add_systems(Startup, create_crosshair)
         .add_systems(Startup, setup)
-        .add_systems(Update, entities_count)
-        .add_systems(Update, world_mesh_gen)
-        .add_systems(Update, mesh_cleanup.before(world_mesh_gen))
+        // .add_systems(Update, entities_count)
+        .add_systems(Update, world_mesh_gen.after(mesh_cleanup))
+        .add_systems(Update, mesh_cleanup.after(camera::FlyCamPlugin::pointer))
         .insert_resource(World::new())
         .run();
 }
 
+#[allow(dead_code)]
 fn entities_count(world: &bevy::prelude::World, meshes: Res<Assets<Mesh>>) {
     println!(
         "Entities: {}, Meshes: {}",
@@ -57,8 +58,8 @@ fn setup(
         ..default()
     });
 
-    for x in -5..=5 {
-        for z in -5..=5 {
+    for x in -2..=2 {
+        for z in -2..=2 {
             world.chunks.insert(IVec3::new(x, 0, z), Chunk::new());
         }
     }
