@@ -17,6 +17,7 @@ fn main() {
         .add_plugins(bevy::asset::diagnostic::AssetCountDiagnosticsPlugin::<Mesh>::default())
         .add_plugins(camera::FlyCamPlugin)
         .add_systems(Startup, create_axis)
+        .add_systems(Startup, create_crosshair)
         .add_systems(Startup, setup)
         .add_systems(Update, entities_count)
         .add_systems(Update, world_mesh_gen)
@@ -61,6 +62,31 @@ fn setup(
             world.chunks.insert(IVec3::new(x, 0, z), Chunk::new());
         }
     }
+}
+
+fn create_crosshair(mut commands: Commands) {
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn(ButtonBundle {
+                style: Style {
+                    width: Val::Px(4.),
+                    height: Val::Px(4.),
+                    ..default()
+                },
+                background_color: Color::WHITE.into(),
+                ..default()
+            });
+        });
 }
 
 fn create_axis(
