@@ -18,7 +18,7 @@ impl Default for FlyCam {
         Self {
             move_speed: 1.,
             sprint_mod: 3.,
-            look_speed: 0.01,
+            look_speed: 0.003,
         }
     }
 }
