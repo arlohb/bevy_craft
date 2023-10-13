@@ -1,5 +1,9 @@
 use crate::{block::Block, world::World};
-use bevy::{input::mouse::MouseMotion, prelude::*};
+use bevy::{
+    input::mouse::MouseMotion,
+    prelude::*,
+    window::{CursorGrabMode, PrimaryWindow},
+};
 use parry3d::na;
 
 #[derive(Component)]
@@ -122,14 +126,23 @@ impl FlyCamPlugin {
 
     fn rotate(
         mut query: Query<(&mut Transform, &FlyCam)>,
+        mut windows: Query<&mut Window, With<PrimaryWindow>>,
         mouse_btns: Res<Input<MouseButton>>,
         mut mouse_motion: EventReader<MouseMotion>,
     ) {
+        let Ok(mut window) = windows.get_single_mut() else { return; };
+
         for (mut transform, fly_cam) in &mut query {
             if !mouse_btns.pressed(MouseButton::Right) {
+                window.cursor.grab_mode = CursorGrabMode::None;
+                window.cursor.visible = true;
+
                 mouse_motion.clear();
                 continue;
             }
+
+            window.cursor.grab_mode = CursorGrabMode::Locked;
+            window.cursor.visible = false;
 
             for &MouseMotion {
                 delta: Vec2 { x, y },
