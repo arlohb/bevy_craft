@@ -1,38 +1,32 @@
 mod block;
 mod camera;
 mod chunk;
+mod custom_diagnostics;
 mod mesh;
 mod world;
 
 use crate::world::World;
 use bevy::prelude::*;
+use bevy_egui::EguiPlugin;
 use chunk::Chunk;
 use world::{mesh_cleanup, world_mesh_gen};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
-        .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin)
         .add_plugins(bevy::asset::diagnostic::AssetCountDiagnosticsPlugin::<Mesh>::default())
+        .add_plugins(custom_diagnostics::CustomDiagnosticsPlugin)
+        .add_plugins(EguiPlugin)
+        .add_systems(Update, custom_diagnostics::egui_diagnostics)
         .add_plugins(camera::FlyCamPlugin)
         .add_systems(Startup, create_axis)
         .add_systems(Startup, create_crosshair)
         .add_systems(Startup, setup)
-        // .add_systems(Update, entities_count)
         .add_systems(Update, world_mesh_gen.after(mesh_cleanup))
         .add_systems(Update, mesh_cleanup.after(camera::FlyCamPlugin::pointer))
         .insert_resource(World::new())
         .run();
-}
-
-#[allow(dead_code)]
-fn entities_count(world: &bevy::prelude::World, meshes: Res<Assets<Mesh>>) {
-    println!(
-        "Entities: {}, Meshes: {}",
-        world.entities().len(),
-        meshes.len()
-    );
 }
 
 fn setup(

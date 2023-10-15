@@ -13,5 +13,6 @@ opt-level = 3
 
 [dependencies]
 bevy = "0.11"
+bevy_egui = "0.22"
 parry3d = "0.13"
 
