@@ -3,7 +3,7 @@ use parry3d::{na, query::RayCast};
 
 use crate::{
     block::Block,
-    chunk::Chunk,
+    chunk::{Chunk, TerrainGen},
     mesh::{mesh_to_tri_mesh, Direction},
 };
 
@@ -132,7 +132,18 @@ pub fn world_mesh_gen(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut world: ResMut<World>,
+    terrain_gen: Res<TerrainGen>,
 ) {
+    for x in -2..=2 {
+        for z in -2..=2 {
+            world
+                .chunks
+                .get_mut(&IVec3::new(x, 0, z))
+                .unwrap()
+                .generate(&terrain_gen);
+        }
+    }
+
     let mut new_colliders = vec![];
 
     for (pos, chunk) in &world.chunks {

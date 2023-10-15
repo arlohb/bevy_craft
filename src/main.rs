@@ -9,7 +9,7 @@ mod world;
 use crate::world::World;
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
-use chunk::Chunk;
+use chunk::{Chunk, TerrainGen};
 use world::{mesh_cleanup, world_mesh_gen};
 
 fn main() {
@@ -26,6 +26,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, world_mesh_gen.after(mesh_cleanup))
         .add_systems(Update, mesh_cleanup.after(camera::FlyCamPlugin::pointer))
+        .insert_resource(TerrainGen::default())
         .insert_resource(World::new())
         .run();
 }
@@ -55,7 +56,8 @@ fn setup(
 
     for x in -2..=2 {
         for z in -2..=2 {
-            world.chunks.insert(IVec3::new(x, 0, z), Chunk::new());
+            let id = IVec3::new(x, 0, z);
+            world.chunks.insert(id, Chunk::new(id));
         }
     }
 }

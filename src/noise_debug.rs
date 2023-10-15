@@ -3,7 +3,9 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use bevy_egui::{egui, EguiContexts};
-use noise::{Fbm, NoiseFn, SuperSimplex};
+use noise::NoiseFn;
+
+use crate::chunk::TerrainGen;
 
 pub struct NoiseDebugPlugin;
 
@@ -20,7 +22,6 @@ pub struct NoiseDebugState {
     noise_image: Handle<Image>,
     width: usize,
     height: usize,
-    fbm: Fbm<SuperSimplex>,
 }
 
 impl Default for NoiseDebugState {
@@ -29,7 +30,6 @@ impl Default for NoiseDebugState {
             noise_image: Handle::default(),
             width: 512,
             height: 512,
-            fbm: Fbm::new(0),
         }
     }
 }
@@ -56,7 +56,8 @@ pub fn create_image_system(mut state: ResMut<NoiseDebugState>, mut images: ResMu
 
 pub fn noise_debug_system(
     mut ctx: EguiContexts,
-    mut state: ResMut<NoiseDebugState>,
+    state: Res<NoiseDebugState>,
+    mut terrain_gen: ResMut<TerrainGen>,
     mut images: ResMut<Assets<Image>>,
 ) {
     let image = images.get_mut(&state.noise_image).unwrap();
@@ -92,7 +93,7 @@ pub fn noise_debug_system(
 
     for x in 0..state.width {
         for y in 0..state.height {
-            let v = state.fbm.get([x as f64, y as f64]);
+            let v = terrain_gen.height.get([x as f64, y as f64]);
             let v = v as f32 / 2. + 0.5;
 
             write_pixel(x, y, v, v, v);
@@ -108,7 +109,7 @@ pub fn noise_debug_system(
             .show(ui, |ui| {
                 ui.label("Octaves");
                 ui.add(
-                    egui::DragValue::new(&mut state.fbm.octaves)
+                    egui::DragValue::new(&mut terrain_gen.height.octaves)
                         .speed(0.5)
                         .clamp_range(1..=6),
                 );
@@ -116,18 +117,18 @@ pub fn noise_debug_system(
 
                 ui.label("Frequency");
                 ui.add(
-                    egui::DragValue::new(&mut state.fbm.frequency)
+                    egui::DragValue::new(&mut terrain_gen.height.frequency)
                         .speed(0.01)
                         .clamp_range(0..=1),
                 );
                 ui.end_row();
 
                 ui.label("Lacunarity");
-                ui.add(egui::DragValue::new(&mut state.fbm.lacunarity).speed(0.05));
+                ui.add(egui::DragValue::new(&mut terrain_gen.height.lacunarity).speed(0.05));
                 ui.end_row();
 
                 ui.label("Persistence");
-                ui.add(egui::DragValue::new(&mut state.fbm.persistence).speed(0.05));
+                ui.add(egui::DragValue::new(&mut terrain_gen.height.persistence).speed(0.05));
                 ui.end_row();
             });
 

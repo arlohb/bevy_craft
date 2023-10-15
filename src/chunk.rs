@@ -1,31 +1,53 @@
 use bevy::prelude::*;
+use noise::{Fbm, NoiseFn, SuperSimplex};
 
 use crate::{
     block::Block,
     mesh::{Direction, IncompleteMesh},
 };
 
+#[derive(Resource)]
+pub struct TerrainGen {
+    pub height: Fbm<SuperSimplex>,
+}
+
+impl Default for TerrainGen {
+    fn default() -> Self {
+        Self {
+            height: Fbm::new(0),
+        }
+    }
+}
+
 pub struct Chunk {
+    id: IVec3,
     blocks: [[[Block; 16]; 16]; 16],
 }
 
 impl Chunk {
-    pub fn new() -> Self {
-        let mut this = Self {
+    /// This does not generate the chunk
+    pub fn new(id: IVec3) -> Self {
+        Self {
+            id,
             blocks: [[[Block::Air; 16]; 16]; 16],
-        };
-
-        this.regenerate();
-
-        this
+        }
     }
 
-    pub fn regenerate(&mut self) {
+    pub fn generate(&mut self, terrain_gen: &TerrainGen) {
         for x in 0..16 {
             for y in 0..16 {
                 for z in 0..16 {
-                    let height = ((x + z) % 2) + 7;
-                    let block = match y {
+                    let global_x = x as i32 + self.id.x * 16;
+                    let global_y = y as i32 + self.id.y * 16;
+                    let global_z = z as i32 + self.id.z * 16;
+
+                    let height = (terrain_gen
+                        .height
+                        .get([global_x as f64, global_z as f64, 0.])
+                        * 4.
+                        + 8.) as i32;
+
+                    let block = match global_y {
                         y if y < height => Block::Stone,
                         y if y == height => Block::Dirt,
                         _ => Block::Air,
