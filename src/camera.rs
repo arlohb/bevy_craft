@@ -80,6 +80,8 @@ impl FlyCamPlugin {
                 );
 
                 *block = Block::Air;
+
+                world.invalid_meshes.push(hit.chunk_id);
             }
         }
     }

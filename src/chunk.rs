@@ -13,9 +13,13 @@ pub struct TerrainGen {
 
 impl Default for TerrainGen {
     fn default() -> Self {
-        Self {
-            height: Fbm::new(0),
-        }
+        let mut height = Fbm::new(0);
+        height.octaves = 4;
+        height.frequency = 0.04;
+        height.lacunarity = 1.95;
+        height.persistence = 0.40;
+
+        Self { height }
     }
 }
 

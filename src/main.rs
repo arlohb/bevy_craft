@@ -10,7 +10,7 @@ use crate::world::World;
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 use chunk::{Chunk, TerrainGen};
-use world::{mesh_cleanup, world_mesh_gen};
+use world::world_mesh_gen;
 
 fn main() {
     App::new()
@@ -24,8 +24,7 @@ fn main() {
         .add_systems(Startup, create_axis)
         .add_systems(Startup, create_crosshair)
         .add_systems(Startup, setup)
-        .add_systems(Update, world_mesh_gen.after(mesh_cleanup))
-        .add_systems(Update, mesh_cleanup.after(camera::FlyCamPlugin::pointer))
+        .add_systems(Update, world_mesh_gen.after(camera::FlyCamPlugin::pointer))
         .insert_resource(TerrainGen::default())
         .insert_resource(World::new())
         .run();
@@ -36,6 +35,7 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut world: ResMut<World>,
+    terrain_gen: Res<TerrainGen>,
 ) {
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
@@ -57,7 +57,10 @@ fn setup(
     for x in -2..=2 {
         for z in -2..=2 {
             let id = IVec3::new(x, 0, z);
-            world.chunks.insert(id, Chunk::new(id));
+            let mut chunk = Chunk::new(id);
+            chunk.generate(&terrain_gen);
+            world.chunks.insert(id, chunk);
+            world.invalid_meshes.push(id);
         }
     }
 }

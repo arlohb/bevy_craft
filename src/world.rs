@@ -3,7 +3,7 @@ use parry3d::{na, query::RayCast};
 
 use crate::{
     block::Block,
-    chunk::{Chunk, TerrainGen},
+    chunk::Chunk,
     mesh::{mesh_to_tri_mesh, Direction},
 };
 
@@ -23,6 +23,10 @@ pub struct WorldTarget {
 pub struct World {
     pub chunks: HashMap<IVec3, Chunk>,
     pub colliders: HashMap<IVec3, parry3d::shape::TriMesh>,
+    pub meshes: HashMap<IVec3, Entity>,
+
+    pub invalid_meshes: Vec<IVec3>,
+
     pub material: Handle<StandardMaterial>,
 }
 
@@ -31,6 +35,10 @@ impl World {
         Self {
             chunks: HashMap::default(),
             colliders: HashMap::default(),
+            meshes: HashMap::default(),
+
+            invalid_meshes: vec![],
+
             material: Handle::default(),
         }
     }
@@ -110,60 +118,36 @@ impl World {
     }
 }
 
-#[derive(Component)]
-pub struct ChunkMesh {
-    mesh_handle: Handle<Mesh>,
-}
-
-pub fn mesh_cleanup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut world: ResMut<World>,
-    query: Query<(Entity, &ChunkMesh)>,
-) {
-    world.colliders.clear();
-    for (entity, chunk_mesh) in &query {
-        meshes.remove(chunk_mesh.mesh_handle.clone());
-        commands.entity(entity).despawn();
-    }
-}
-
 pub fn world_mesh_gen(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut world: ResMut<World>,
-    terrain_gen: Res<TerrainGen>,
 ) {
-    for x in -2..=2 {
-        for z in -2..=2 {
-            world
-                .chunks
-                .get_mut(&IVec3::new(x, 0, z))
-                .unwrap()
-                .generate(&terrain_gen);
+    println!(
+        "Regenerating {} meshes this frame",
+        world.invalid_meshes.len()
+    );
+
+    for chunk_id in std::mem::take(&mut world.invalid_meshes) {
+        // TODO For now this doesn't delete the mesh,
+        // need to test whether it's auto removed
+        if let Some(&chunk) = world.meshes.get(&chunk_id) {
+            commands.entity(chunk).despawn();
         }
-    }
 
-    let mut new_colliders = vec![];
-
-    for (pos, chunk) in &world.chunks {
-        let mesh = chunk.build_mesh();
-
-        new_colliders.push((*pos, mesh_to_tri_mesh(&mesh)));
+        let mesh = world.chunks[&chunk_id].build_mesh();
+        world.colliders.insert(chunk_id, mesh_to_tri_mesh(&mesh));
 
         let mesh_handle = meshes.add(mesh);
-        commands.spawn((
-            PbrBundle {
+        let entity = commands
+            .spawn(PbrBundle {
                 mesh: mesh_handle.clone(),
                 material: world.material.clone(),
-                transform: Transform::from_translation(16. * pos.as_vec3()),
+                transform: Transform::from_translation(16. * chunk_id.as_vec3()),
                 ..default()
-            },
-            ChunkMesh { mesh_handle },
-        ));
-    }
+            })
+            .id();
 
-    for (pos, tri_mesh) in new_colliders {
-        world.colliders.insert(pos, tri_mesh);
+        world.meshes.insert(chunk_id, entity);
     }
 }

@@ -5,7 +5,7 @@ use bevy::{
 use bevy_egui::{egui, EguiContexts};
 use noise::NoiseFn;
 
-use crate::chunk::TerrainGen;
+use crate::{chunk::TerrainGen, world::World};
 
 pub struct NoiseDebugPlugin;
 
@@ -22,6 +22,7 @@ pub struct NoiseDebugState {
     noise_image: Handle<Image>,
     width: usize,
     height: usize,
+    debug_tex: bool,
 }
 
 impl Default for NoiseDebugState {
@@ -30,6 +31,7 @@ impl Default for NoiseDebugState {
             noise_image: Handle::default(),
             width: 512,
             height: 512,
+            debug_tex: true,
         }
     }
 }
@@ -56,9 +58,10 @@ pub fn create_image_system(mut state: ResMut<NoiseDebugState>, mut images: ResMu
 
 pub fn noise_debug_system(
     mut ctx: EguiContexts,
-    state: Res<NoiseDebugState>,
+    mut state: ResMut<NoiseDebugState>,
     mut terrain_gen: ResMut<TerrainGen>,
     mut images: ResMut<Assets<Image>>,
+    mut world: ResMut<World>,
 ) {
     let image = images.get_mut(&state.noise_image).unwrap();
 
@@ -91,12 +94,14 @@ pub fn noise_debug_system(
         image.data[i + 15] = a[3];
     };
 
-    for x in 0..state.width {
-        for y in 0..state.height {
-            let v = terrain_gen.height.get([x as f64, y as f64]);
-            let v = v as f32 / 2. + 0.5;
+    if state.debug_tex {
+        for x in 0..state.width {
+            for y in 0..state.height {
+                let v = terrain_gen.height.get([x as f64, y as f64]);
+                let v = v as f32 / 2. + 0.5;
 
-            write_pixel(x, y, v, v, v);
+                write_pixel(x, y, v, v, v);
+            }
         }
     }
 
@@ -107,31 +112,63 @@ pub fn noise_debug_system(
             .num_columns(2)
             .striped(true)
             .show(ui, |ui| {
-                ui.label("Octaves");
-                ui.add(
+                let mut regen = false;
+
+                macro_rules! fbm_value {
+                    ($name:expr, $val:expr, $drag_value:expr) => {{
+                        ui.label($name);
+                        let old_val = $val;
+                        ui.add($drag_value);
+                        if $val != old_val {
+                            regen = true;
+                        }
+                        ui.end_row();
+                    }};
+                }
+
+                fbm_value!(
+                    "Octaves",
+                    terrain_gen.height.octaves,
                     egui::DragValue::new(&mut terrain_gen.height.octaves)
                         .speed(0.5)
-                        .clamp_range(1..=6),
+                        .clamp_range(1..=6)
                 );
-                ui.end_row();
 
-                ui.label("Frequency");
-                ui.add(
+                fbm_value!(
+                    "Frequency",
+                    terrain_gen.height.frequency,
                     egui::DragValue::new(&mut terrain_gen.height.frequency)
                         .speed(0.01)
-                        .clamp_range(0..=1),
+                        .clamp_range(0..=1)
                 );
-                ui.end_row();
 
-                ui.label("Lacunarity");
-                ui.add(egui::DragValue::new(&mut terrain_gen.height.lacunarity).speed(0.05));
-                ui.end_row();
+                fbm_value!(
+                    "Lacunarity",
+                    terrain_gen.height.lacunarity,
+                    egui::DragValue::new(&mut terrain_gen.height.lacunarity).speed(0.05)
+                );
 
-                ui.label("Persistence");
-                ui.add(egui::DragValue::new(&mut terrain_gen.height.persistence).speed(0.05));
+                fbm_value!(
+                    "Persistence",
+                    terrain_gen.height.persistence,
+                    egui::DragValue::new(&mut terrain_gen.height.persistence).speed(0.05)
+                );
+
+                if regen {
+                    for (_, chunk) in &mut world.chunks {
+                        chunk.generate(&terrain_gen);
+                    }
+
+                    world.invalid_meshes = world.chunks.keys().copied().collect::<Vec<_>>();
+                }
+
+                ui.label("Debug tex");
+                ui.checkbox(&mut state.debug_tex, "");
                 ui.end_row();
             });
 
-        ui.image(egui::load::SizedTexture::new(tex, [256., 256.]));
+        if state.debug_tex {
+            ui.image(egui::load::SizedTexture::new(tex, [256., 256.]));
+        }
     });
 }
